@@ -1,0 +1,60 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <title>UBBT Member Map</title>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.2.6/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.5.2/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script>
+  <script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key=ABQIAAAACwtC1wSU10pnx-bsQKiIdRTSb75wkVmE04JoICmcwp52mwiriBQm-ifImyWR7bFEjPV91FiJYkbHpg" type="text/javascript"></script>
+  <script type="text/javascript" src="http://mapstraction.com/src/mapstraction.js"></script>
+  <script type="text/javascript" src="http://mapstraction.com/src/mapstraction-geocode.js"></script>
+  <style type="text/css" media="screen">
+    #map {
+      width: 90%;
+      height: 400px;
+    }
+  </style>
+  <script type="text/javascript" charset="utf-8">
+    $(function() {
+      var members;
+      var mapstraction = new Mapstraction('map','google');
+      mapstraction.setCenterAndZoom(new LatLonPoint(40.714751, -74.330531), 4);
+      mapstraction.addControls({
+        zoom: 'large',
+        map_type: true
+      });
+      
+      var ssID = "p-UDW_kT2vS0-aGjWAMWxdw";
+      var url = "http://spreadsheets.google.com/feeds/list/"+ssID+"/od6/public/values?alt=json-in-script&callback=?";
+      $.getJSON(url, function(data) {
+        members = $.grep(data.feed.entry, function(row, i) { return (row.gsx$city.$t != "")});
+        $.each(members, function(i, member) {
+          var geocoder = new MapstractionGeocoder(function(result) {
+            var marker = new Marker(result.point);
+            marker.setInfoBubble(
+            '<div class="bubble">' + 
+              member.gsx$schoolname.$t + "<br/>" +
+              member.gsx$address.$t + "<br/>" +
+              member.gsx$address2.$t + "<br/>" +
+              member.gsx$city.$t + " " + member.gsx$state.$t + " " + member.gsx$zip.$t + "<br/>" +
+            '</div>'
+            );
+            $("<li>" + member.gsx$schoolname.$t + "</li>").appendTo("#members").click(function() {
+              marker.openBubble();
+            });
+            mapstraction.addMarker(marker);
+          }, 'google');
+          geocoder.geocode({'address': member.gsx$address.$t + " " + member.gsx$address2.$t + " " + member.gsx$zip.$t})
+        })
+      });
+    });
+  </script>
+</head>
+<body>
+  <div id="page">
+    <div id="map"></div>
+    <ul id="members"></ul>
+  </div>
+</body>
+</html>
