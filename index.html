@@ -19,26 +19,30 @@
     $(function() {
       var members;
       var mapstraction = new Mapstraction('map','google');
-      mapstraction.setCenterAndZoom(new LatLonPoint(39.774769, -97.558594), 3);
+      mapstraction.setCenterAndZoom(new LatLonPoint(39.774769, -97.558594), 4);
       mapstraction.setMapType(Mapstraction.HYBRID);
       mapstraction.addControls({
         zoom: 'large',
         map_type: true
       });
       
+      var host = "spreadsheets.google.com";
       var ssID = "p-UDW_kT2vS0-aGjWAMWxdw";
-      var url = "http://spreadsheets.google.com/feeds/list/"+ssID+"/od6/public/values?alt=json-in-script&callback=?";
+      var feedPath = "od6/public/values?alt=json-in-script&callback=?";
+      var url = "http://" + host + "/feeds/list/"+ssID+"/" + feedPath;
       $.getJSON(url, function(data) {
-        members = $.grep(data.feed.entry, function(row, i) { return (row.gsx$city.$t != "")});
+        members = $.grep(data.feed.entry, function(row, i) { 
+          return (row.gsx$city.$t != "")
+        });
         $.each(members, function(i, member) {
-          var geocoder = new MapstractionGeocoder(function(result) {
-            var marker = new Marker(result.point);
+          function setMarkerAndPlace(marker) {
             marker.setInfoBubble(
             '<div class="bubble">' + 
               member.gsx$schoolname.$t + "<br/>" +
               member.gsx$address.$t + "<br/>" +
               member.gsx$address2.$t + "<br/>" +
-              member.gsx$city.$t + " " + member.gsx$state.$t + " " + member.gsx$zip.$t + "<br/>" +
+              member.gsx$city.$t + " " + member.gsx$state.$t + " " + member.gsx$zip.$t + 
+              "<br/>" +
             '</div>'
             );
             $("<li>" + member.gsx$schoolname.$t + " — " + 
@@ -46,13 +50,25 @@
               marker.openBubble();
             });
             mapstraction.addMarker(marker);
-          }, 'google');
-          geocoder.geocode({'address': member.gsx$address.$t + 
-                                       " " + member.gsx$address2.$t + 
-                                       " " + member.gsx$city.$t +
-                                       " " + member.gsx$state.$t +
-                                       ", " + member.gsx$zip.$t})
-        })
+          }
+          if (member.gsx$lat.$t && member.gsx$lon.$t) {
+            var marker = new Marker(new LatLonPoint(member.gsx$lat.$t, member.gsx$lon.$t));
+            setMarkerAndPlace(marker);
+          }
+          else {
+            var geocoder = new MapstractionGeocoder(function(result) {
+              var marker = new Marker(result.point);
+              setMarkerAndPlace(marker)
+            }, 'google', function(error) {
+              console.log("error with " + member.gsx$name.$t + ": " + error);
+            });
+            geocoder.geocode({
+              'address': member.gsx$address.$t + 
+               " " + member.gsx$address2.$t + " " + member.gsx$city.$t +
+               " " + member.gsx$state.$t +", " + member.gsx$zip.$t
+            });              
+          }
+        });
       });
     });
   </script>
